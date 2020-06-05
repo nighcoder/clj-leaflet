@@ -1,0 +1,4 @@
+{:paths ["src" "resources"]
+  :deps
+  {nighcoder/clojupyter
+    {:local/root "/home/ciumbi/code/clojupyter"}}}

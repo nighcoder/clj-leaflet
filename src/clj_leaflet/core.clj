@@ -2,6 +2,8 @@
   (:require [camel-snake-kebab.core :as csk]
             [clj-leaflet.colors :as col]
             [clojupyter.kernel.comm-atom :as ca]
+            [clojupyter.state :as st]
+            [clojupyter.util-actions :as u!]
             [clojupyter.widgets.alpha :as inter]
             [clojure.data.json :as json]
             [clojure.java.io :as io]))
@@ -24,23 +26,23 @@
 
 (defn def-widget
   [{attributes "attributes"}]
-  (let [all-attrs (->> attributes (map #(get % "name")) (map keyword) (filterv (partial not= :layers)))]
+  (let [all-attrs (->> attributes (clojure.core/map #(get % "name")) (clojure.core/map keyword) (filterv (partial not= :layers)))]
     (reduce merge
       (for [{name "name" default "default" type "type"} attributes]
         {(keyword name) (cond
-                         (= name "options") all-attr
+                         (= name "options") all-attrs
                           (= type "reference") nil
                           :else default)}))))
 
 (defn base-widget
-  ([state] (base-widget state (u/uuid)))
+  ([state] (base-widget state (u!/uuid)))
   ([state comm-id]
    (let [{jup :jup req-msg :req-message} (st/current-context)
          target "jupyter.widget"
          sync-keys (set (keys state))]
      (ca/create-and-insert jup req-msg target comm-id sync-keys state))))
 
-(declare tile-layer zoom-control attribution-control)
+(declare tile-layer zoom-control attribution-control geo-json)
 
 (defn make-widget
   [spec]
@@ -78,7 +80,7 @@
         ;; We are generating anything but a map
         base))))
 
-(for [{n "name" :as spec} SPECS]
+(doseq [{n "name" :as spec} SPECS]
   (eval `(def ~(symbol n) ~(make-widget spec))))
 
 (defn choropleth
@@ -86,25 +88,25 @@
   (let [base-color "#E96622"
         def-color-fn (fn [data]
                        (if (empty? (vals data))
-                         (constantly "#E96622")
+                         (constantly base-color)
                          (let [v-min (reduce min (vals data))
                                v-max (reduce max (vals data))]
                            (if (= v-min v-max)
-                             (constantly "#E96622")
-                             (col/single-hue-linear-fn v-min v-max "#E96622")))))
+                             (constantly base-color)
+                             (col/single-hue-linear-fn v-min v-max base-color)))))
         color-fn (or color-fn def-color-fn)
         color-feature (fn [feat data c-fn key-path]
                         (let [k (get-in feat key-path)]
                           (if-let [v (get data k)]
-                            (assoc-in feat [:properties :style] {:fillColor (c-fn v) :color "black" :weight 0.9})
+                            (assoc-in feat ["properties" "style"] {:fillColor (c-fn v) :color "black" :weight 0.9})
                             feat)))
-        color-geo-data (fn [{type :type :as geo-data} data c-fn key-path]
+        color-geo-data (fn [{type "type" :as geo-data} data c-fn key-path]
                         (case type
                            "Feature" (color-feature geo-data data c-fn key-path)
-                           "FeatureCollection" (update geo-data :features
+                           "FeatureCollection" (update geo-data "features"
                                                  ;; Arguably pmap is overkill, especially because its performance is dependent on data size
                                                  ;; Tested on 5MB GEO-JSON on 4-core PC it reduces the loading time from ~1700 to ~800 ms.
-                                                 (fn [feat] (reduce concat [] (pmap (partial map #(color-feature % data c-fn key-path)) (partition 8 feat))))
+                                                 (fn [feat] (reduce concat (pmap (partial clojure.core/map #(color-feature % data c-fn key-path)) (partition 8 feat))))
                                                  #_(fn [feat] (mapv #(color-feature % data c-fn key-path) feat)))
                            geo-data))
         state (assoc args
