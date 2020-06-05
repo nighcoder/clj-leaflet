@@ -1,27 +1,26 @@
 (ns clj-leaflet.core
   (:require [camel-snake-kebab.core :as csk]
             [clj-leaflet.colors :as col]
-            [clojupyter.kernel.comm-atom :as ca]
-            [clojupyter.state :as st]
-            [clojupyter.util-actions :as u!]
             [clojupyter.widgets.alpha :as inter]
-            [clojure.data.json :as json]
-            [clojure.java.io :as io]))
+            [clojupyter.widgets.ipywidgets :as widget]
+            [cheshire.core :as json]
+            [clojure.java.io :as io]
+            [clojure.walk :as walk]))
 
 
 (def SPECS (-> "leaflet-schema.min.json"
                io/resource
                slurp
-               json/read-str))
+               json/parse-string))
 
 (def BASE-MAPS
-  (let [base-maps (json/read-str (slurp "./resources/basemaps.json"))
+  (let [base-maps (json/parse-string (slurp "./resources/basemaps.json"))
         k-maps (for [[outer-key v] base-maps]
                  (if (contains? v "name")
-                   {(csk/->kebab-case-keyword outer-key) (clojure.walk/keywordize-keys v)}
+                   {(csk/->kebab-case-keyword outer-key) (walk/keywordize-keys v)}
                    (reduce merge
                      (for [[inner-key vv] v]
-                       {(csk/->kebab-case-keyword (str outer-key inner-key)) (clojure.walk/keywordize-keys vv)}))))]
+                       {(csk/->kebab-case-keyword (str outer-key inner-key)) (walk/keywordize-keys vv)}))))]
     (reduce merge k-maps)))
 
 (defn def-widget
@@ -30,17 +29,10 @@
     (reduce merge
       (for [{name "name" default "default" type "type"} attributes]
         {(keyword name) (cond
-                         (= name "options") all-attrs
+                          (= name "options") all-attrs
                           (= type "reference") nil
                           :else default)}))))
 
-(defn base-widget
-  ([state] (base-widget state (u!/uuid)))
-  ([state comm-id]
-   (let [{jup :jup req-msg :req-message} (st/current-context)
-         target "jupyter.widget"
-         sync-keys (set (keys state))]
-     (ca/create-and-insert jup req-msg target comm-id sync-keys state))))
 
 (declare tile-layer zoom-control attribution-control geo-json)
 
@@ -49,7 +41,7 @@
   (fn constructor
     [& {:as args}]
     (let [d-state (def-widget spec)
-          base (base-widget d-state)]
+          base (widget/base-widget d-state)]
       (swap! base merge args)
       (if (= (get spec "name") "map")
         ;; Are we generating a map?

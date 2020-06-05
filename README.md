@@ -1,10 +1,34 @@
 # clj-leaflet
 
-A Clojure library for creating Jupyter widgets in clojupyter.
+A Clojure library for creating ipyleaflet widgets in clojupyter.
 
 ## Usage
 
-See main-notebook for setup and usage.
+See main-notebook for usage.
+
+## Requirements
+To build the package, you'll need to have installed: a JVM, lein, make, clojure and git.
+To use the package you'll need to have installed: the Jupyter Package with the proper extensions.
+
+## Installation
+Clone the [clojupyter](https://github.com/clojupyter/clojupyter.git) package somewere on the disk:
+```bash
+$ git clone https://github.com/clojupyter/clojupyter.git
+```
+Enter the clojupyter directory and switch to `feature/ipywidgets` branch:
+```bash
+$ cd clojupyter && git checkout feature/ipywidgets
+```
+Copy the absolute path of clojupyter root directory to `clj-leaflet/deps.edn` on `:local/root`.
+Back into `clj-leaflet` directory, after you updated deps.edn, run:
+```bash
+make install
+```
+At this point, you have a new clojure kernel installed as clojupyter-leaflet.
+
+To view and interact with the models, you also need to install the right extension for your front end.
+The main notebook was tested with **Jupyter Lab 2.0.1** with extensions **@jupyter-widgets/jupyterlab-manager v2.0.0** and **jupyter-widgets v0.12.6**.
+For details, see the [ipywidgets](https://github.com/jupyter-widgets/ipywidgets) and [ipyleaflet](https://github.com/jupyter-widgets/ipyleaflet) instruction for installing the front end extensions.
 
 ## License
 
