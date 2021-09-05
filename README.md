@@ -1,5 +1,7 @@
 # clj-leaflet
 
+# DEPRECATED. See [leaflet](https://github.com/nighcoder/leaflet)
+
 A Clojure library for creating ipyleaflet widgets in clojupyter.
 
 ## Usage
